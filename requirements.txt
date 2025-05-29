@@ -1,0 +1,13 @@
+fastapi>=0.68.0
+uvicorn>=0.15.0
+llama-index>=0.9.0
+llama-index-embeddings-openai>=0.1.0
+llama-index-llms-openai>=0.1.0
+llama-index-vector-stores-chroma>=0.1.0
+chromadb>=0.4.0
+python-dotenv>=0.19.0
+pydantic>=1.8.0
+pathlib>=1.0.1
+shutil>=0.1.0
+uuid>=1.30
+urllib3>=1.26.0 
