@@ -1,0 +1,8 @@
+Component,RSF,% NRA,Lease Expiration Date,Annual Rent ($),Rent PSF ($)
+Tenant A - Ground Floor Warehouse,100000,28%,Mar-35,3700000,37.00
+Tenant A - Office (2nd Floor),15000,4%,Mar-35,675000,45.00
+Tenant B - Cold Storage Facility,85000,24%,Jul-36,3400000,40.00
+Tenant B - Loading Bays,10000,3%,Jul-36,320000,32.00
+Tenant C - Rooftop Solar Lease,150000,41%,Nov-37,1500000,10.00
+Tenant C - Ground-Level EV Stalls,5000,1%,Nov-37,75000,15.00
+Total / W.A,365000,100%,Mixed,9670000,26.50

@@ -1,0 +1,12 @@
+Tenant Name,Lease Start,Lease End,Square Footage,Use,Rent PSF Start,Annual Escalation (%),Termination Clause,Renewal Options,Status
+Amazon.com Services LLC,01/05/2022,30/09/2037,312000,Last-Mile Logistics,24.4,3,No Early Termination,4x 5-Year at FMV,Active
+Microsoft Corporation,01/03/2023,31/12/2038,185500,Office/Data Center,28.75,2.5,60-Day Notice After Year 10,2x 10-Year at 95% FMV,Expired
+Walmart Inc.,15/08/2021,14/08/2041,450000,Distribution Center,18.2,2.8,No Early Termination,3x 5-Year at FMV,Active
+Tesla Manufacturing LLC,01/11/2024,31/10/2044,275800,Manufacturing/Assembly,22.5,3.2,Early Term After Year 15,2x 7-Year at FMV,Active
+FedEx Ground Services,12/04/2020,11/04/2040,198750,Logistics Hub,21.8,2.75,180-Day Notice After Year 12,4x 5-Year at 92% FMV,Active
+Meta Platforms Inc.,01/07/2023,30/06/2043,125000,Office/R&D,42,3.5,No Early Termination,1x 10-Year at FMV,Active
+Home Depot USA Inc.,01/02/2022,31/01/2037,380000,Retail Distribution,16.9,2.25,90-Day Notice After Year 10,3x 5-Year at 98% FMV,Expired
+UPS Supply Chain Solutions,15/09/2023,14/09/2038,225400,Cold Storage/Logistics,26.3,3,Early Term After Year 8,2x 5-Year at FMV,Active
+Johnson & Johnson Services,01/06/2021,31/05/2046,95600,Pharmaceutical R&D,38.75,2.8,No Early Termination,2x 10-Year at 90% FMV,Active
+Costco Wholesale Corp,01/12/2024,30/11/2039,520000,Warehouse/Distribution,15.45,2.5,120-Day Notice After Year 12,3x 5-Year at FMV,Expired
+Apple Inc.,01/01/2023,31/12/2042,75000,Design Studio/Office,55.2,4,Early Term After Year 15,1x 5-Year at 105% FMV,Active
