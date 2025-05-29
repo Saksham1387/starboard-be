@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 from llama_index.llms.gemini import Gemini
 import json
 import re
-from server import logger
+
 def convert_string_to_json(json_string):
     # Remove markdown code blocks if present
     cleaned_string = re.sub(r'^```json\n?', '', json_string)
@@ -50,14 +50,14 @@ def download_file_from_url(url: str, destination_path: str) -> str:
                 if chunk:
                     f.write(chunk)
         
-        logger.info(f"Downloaded file: {filename} from {url}")
+       
         return filename
         
     except requests.exceptions.RequestException as e:
-        logger.error(f"Error downloading file from {url}: {str(e)}")
+        
         raise Exception(f"Failed to download file from {url}: {str(e)}")
     except Exception as e:
-        logger.error(f"Unexpected error downloading file from {url}: {str(e)}")
+       
         raise Exception(f"Failed to download file from {url}: {str(e)}")
 
 
