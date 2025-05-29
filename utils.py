@@ -2,11 +2,10 @@ import os
 import uuid
 import requests
 from urllib.parse import urlparse
-from hello import logger
 from llama_index.llms.gemini import Gemini
 import json
 import re
-
+from server import logger
 def convert_string_to_json(json_string):
     # Remove markdown code blocks if present
     cleaned_string = re.sub(r'^```json\n?', '', json_string)
