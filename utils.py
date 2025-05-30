@@ -5,6 +5,9 @@ from urllib.parse import urlparse
 from llama_index.llms.gemini import Gemini
 import json
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 def convert_string_to_json(json_string):
     # Remove markdown code blocks if present
@@ -258,48 +261,38 @@ def setup_llm_with_summary_prompt():
     )
 
 def setup_llm_with_source_prompt():
-    return Gemini(
-        model="models/gemini-2.5-flash-preview-05-20",
-        system_prompt=
-        '''
-            <SYSTEM_CONSTRAINT>
-                ROLE: You are an expert in analyzing property documents and real estate data.
+    try:
+        llm = Gemini(
+            model="models/gemini-2.5-flash-preview-05-20",
+            system_prompt=
+            '''
+                <SYSTEM_CONSTRAINT>
+                    ROLE: You are an expert in analyzing property documents and real estate data.
 
-                RESPONSE STYLE:
-                     - Be brief and precise. Avoid any unnecessary elaboration.
-                     - Only answer what is directly asked in the query. No extra context or assumptions.
-                     - Use bullet points or tables wherever possible to structure the answer.
-                     - Every fact must be immediately followed by a citation in this format: [Source: filename.pdf, Page X].
+                    RESPONSE STYLE:
+                         - Be brief and precise. Avoid any unnecessary elaboration.
+                         - Only answer what is directly asked in the query. No extra context or assumptions.
+                         - Use bullet points or tables wherever possible to structure the answer.
+                         - Every fact must be immediately followed by a citation in this format: [Source: filename.pdf, Page X].
 
-                CITATION RULE:
-                     - No fact should appear without a citation.
-                     - Example: "Zoning: R-1 Residential [Source: zoning_report.pdf, Page 3]"
+                    CITATION RULE:
+                         - No fact should appear without a citation.
+                         - Example: "Zoning: R-1 Residential [Source: zoning_report.pdf, Page 3]"
 
-                CONTENT SCOPE:
-                      - Do NOT provide any information not found in the property documents.
-                      - Only include content relevant to the specific query.
-                      
-                FORMATTING:
-                     - Use markdown for bullets and tables.
-            </SYSTEM_CONSTRAINT>
-
-        '''
-        # system_prompt='''
-        #     <SYSTEM_CONSTRAINT>
-        #         FOCUS: You are an expert in property documents and real estate information.
-        #         FOCUS: For EVERY piece of information you provide, cite the source document.
-        #         FOCUS: Use this format: [Source: filename.pdf, Page X] after each fact.
-        #         FOCUS: Use points and Tables to provide information.
-        #         FOCUS: Provide detailed, structured responses with relevant metadata.
-        #         FOCUS: Use markdown formatting for clarity.
-        #     </SYSTEM_CONSTRAINT>
-            
-        #     CITATION FORMAT:
-        #     - After each fact or piece of information, add: [Source: document_name, details]
-        #     - Example: "The property is zoned as R-1 residential [Source: zoning_report.pdf, Page 3]"
-            
-        #     - DO not provide any information that is not related to the property documents.
-        #     - Provide information related to the Query only, no additional context.
-        #     - Try to use Tables and Points to provide information.
-        # '''
-    )
+                    CONTENT SCOPE:
+                          - Do NOT provide any information not found in the property documents.
+                          - Only include content relevant to the specific query.
+                          
+                    FORMATTING:
+                         - Use markdown for bullets and tables.
+                </SYSTEM_CONSTRAINT>
+            ''',
+            temperature=0.1,  # Lower temperature for more focused responses
+            max_tokens=1000,  # Ensure we get substantial responses
+            top_p=0.9,  # Slightly more focused sampling
+            top_k=40  # Good balance between diversity and focus
+        )
+        return llm
+    except Exception as e:
+        logger.error(f"Error setting up LLM: {str(e)}")
+        raise

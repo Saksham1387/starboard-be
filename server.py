@@ -45,6 +45,19 @@ app.add_middleware(
 rag_systems: Dict[str, Any] = {}
 processing_status: Dict[str, Dict] = {}
 
+# Single ChromaDB instance for all queries
+db_path = "./chroma_db_3e28f1db-c333-4f1d-899e-de5004845fcb"
+db = chromadb.PersistentClient(path=db_path)
+
+# List all available collections
+collections = db.list_collections()
+if not collections:
+    raise ValueError("No collections found in the ChromaDB database")
+
+# Use the first available collection
+chroma_collection = collections[0]
+print(f"Using ChromaDB collection: {chroma_collection.name}")
+
 # Updated Pydantic models
 class ProcessS3Request(BaseModel):
     user_id: str
@@ -57,12 +70,12 @@ class ProcessResponse(BaseModel):
     message: str
 
 class ChatRequest(BaseModel):
-    project_id: str
+    # project_id: str  # Commented out project_id requirement
     message: str
     user_id: str
 
 class ChatResponse(BaseModel):
-    project_id: str
+    # project_id: str  # Commented out project_id requirement
     answer: str
     sources: List[Dict[str, Any]]
     metadata: Dict[str, Any]
@@ -164,20 +177,7 @@ def create_user_rag_system(project_id: str, user_id: str, data_dir: str):
             doc.metadata['project_id'] = project_id
             doc.metadata['doc_id'] = hash(doc.text[:100])
         
-        # Create user-specific ChromaDB collection
-        db_path = f"./chroma_db_{project_id}"
-        db = chromadb.PersistentClient(path=db_path)
-        
-        # Collection name includes project for isolation
-        collection_name = f"project_{project_id}"
-        chroma_collection = db.get_or_create_collection(
-            name=collection_name,
-            metadata={
-                "user_id": user_id,
-                "project_id": project_id
-            }
-        )
-        
+        # Use the shared ChromaDB collection
         vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
         storage_context = StorageContext.from_defaults(vector_store=vector_store)
         
@@ -395,36 +395,61 @@ async def chat_with_documents(request: ChatRequest):
     Chat with processed documents
     """
     try:
-        # Check if project exists and is ready
-        if request.project_id not in rag_systems:
-            # Check if still processing
-            if (request.project_id in processing_status and 
-                processing_status[request.project_id]["status"] == "processing"):
-                raise HTTPException(
-                    status_code=202, 
-                    detail="Documents are still being processed. Please wait."
-                )
-            else:
-                raise HTTPException(
-                    status_code=404, 
-                    detail="Project not found or processing failed"
-                )
+        # Check if there are any documents in the collection
+        collection_count = chroma_collection.count()
+        if collection_count == 0:
+            raise HTTPException(
+                status_code=404, 
+                detail="No documents have been processed yet"
+            )
         
-        # Verify user ownership
-        project_info = rag_systems[request.project_id]
-        if project_info["user_id"] != request.user_id:
-            raise HTTPException(status_code=403, detail="Access denied")
+        # Set up LLM and embeddings
+        Settings.llm = setup_llm_with_source_prompt()
         
-        # Get RAG engine
-        rag_engine = project_info["rag_engine"]
+        # Create a new RAG engine using the existing collection
+        vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+        storage_context = StorageContext.from_defaults(vector_store=vector_store)
         
-        # Process query
-        logger.info(f"Processing chat query for project {request.project_id}")
+        # Create vector index from existing collection
+        index = VectorStoreIndex.from_vector_store(
+            vector_store=vector_store,
+            storage_context=storage_context
+        )
+        
+        # Set up retriever and query engine with more lenient settings
+        retriever = VectorIndexRetriever(
+            index=index,
+            similarity_top_k=8,  # Increased from 5 to 8
+        )
+        
+        response_synthesizer = get_response_synthesizer(
+            response_mode="compact",  # Changed from tree_summarize to compact
+            use_async=False,
+            streaming=False
+        )
+        
+        base_query_engine = RetrieverQueryEngine(
+            retriever=retriever,
+            response_synthesizer=response_synthesizer,
+            node_postprocessors=[
+                SimilarityPostprocessor(similarity_cutoff=0.1)  # Lowered from 0.2 to 0.1
+            ],
+        )
+        
+        # Wrap with source tracking
+        rag_engine = SourceTrackingQueryEngine(base_query_engine)
+        
+        # Process query with better logging
+        logger.info(f"Processing chat query: {request.message}")
         response = rag_engine.query(request.message)
         sources = rag_engine.get_last_sources()
-
-        print("Response from LLM:", response)
         
+        logger.info(f"Response from LLM: {response}")
+        logger.info(f"Number of sources retrieved: {len(sources)}")
+        
+        if not response or str(response).strip() == "":
+            logger.warning("Empty response received from LLM")
+            response = "I apologize, but I couldn't generate a meaningful response based on the available information. Please try rephrasing your question or providing more context."
         
         # Format response
         result = {
@@ -439,7 +464,6 @@ async def chat_with_documents(request: ChatRequest):
         }
         
         return ChatResponse(
-            project_id=request.project_id,
             answer=result["answer"],
             sources=result["sources"],
             metadata=result["metadata"]
@@ -449,73 +473,6 @@ async def chat_with_documents(request: ChatRequest):
         raise
     except Exception as e:
         logger.error(f"Error in chat endpoint: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/summary", response_model=SummaryResponse)
-async def generate_summary(request: SummaryRequest):
-    """
-    Generate a summary of the processed documents
-    """
-    try:
-        # Check if project exists and is ready
-        if request.project_id not in rag_systems:
-            # Check if still processing
-            if (request.project_id in processing_status and 
-                processing_status[request.project_id]["status"] == "processing"):
-                raise HTTPException(
-                    status_code=202, 
-                    detail="Documents are still being processed. Please wait."
-                )
-            else:
-                raise HTTPException(
-                    status_code=404, 
-                    detail="Project not found or processing failed"
-                )
-        
-        # Verify user ownership
-        project_info = rag_systems[request.project_id]
-        if project_info["user_id"] != request.user_id:
-            raise HTTPException(status_code=403, detail="Access denied")
-        
-        # Get RAG engine
-        rag_engine = project_info["rag_engine"]
-        
-        # Set up summary-specific LLM
-        Settings.llm = setup_llm_with_summary_prompt()
-        
-        # Generate summary using a specific prompt
-        summary_prompt = system_prompt
-        response = rag_engine.query(summary_prompt)
-        sources = rag_engine.get_last_sources()
-        
-        print("Response from LLM:", response)
-        # cleaned_json_str = str(response).encode('utf-8').decode('unicode_escape')
-    
-        # # Step 2: Parse it into a dictionary
-        # parsed_data = json.loads(cleaned_json_str)
-
-        parsed_json = convert_string_to_json(str(response))
-        
-        # Format response
-        result = {
-            "summary": parsed_json,
-            "metadata": {
-                "source_count": len(sources),
-                "unique_files": list(set(s["file_name"] for s in sources)),
-                "summary_length": len(str(response).split())
-            }
-        }
-        
-        return SummaryResponse(
-            project_id=request.project_id,
-            summary=result["summary"],
-            metadata=result["metadata"]
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error in summary endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
