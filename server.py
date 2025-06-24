@@ -34,7 +34,7 @@ app = FastAPI(title="RAG Service API", version="1.0.0")
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  # Allow all origins
     allow_credentials=False,  # Must be False when using "*"
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
